@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Uploader</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+      }
+      #output {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        min-height: 30px;
+      }
+      .processing {
+        color: #0066cc;
+      }
+      .error {
+        color: #cc0000;
+      }
+      .success {
+        color: #00cc00;
+      }
+      button {
+        padding: 10px 20px;
+        margin-left: 10px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      input[type="file"] {
+        margin: 10px 0;
+      }
+      .file-info {
+        margin: 10px 0;
+        padding: 10px;
+        background: #e8f4f8;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Audio/Video Vocal Separator</h1>
+    <div>
+      <div>File: <input type="file" accept="audio/mp3,audio/mpeg,video/mp4" name="uploader" id="f" /></div>
+      <div id="fileInfo" class="file-info" style="display: none;"></div>
+      <button id="btnUpload">Upload and Process</button>
+    </div>
+    <div id="output"></div>
+    <script>
+      const btnUpload = document.getElementById("btnUpload");
+      const output = document.getElementById("output");
+      const f = document.getElementById("f");
+      const fileInfo = document.getElementById("fileInfo");
+
+      // Show file information when selected
+      f.addEventListener("change", () => {
+        const file = f.files[0];
+        if (file) {
+          const fileType = file.type === "video/mp4" || file.name.toLowerCase().endsWith(".mp4") 
+            ? "Video (MP4) - Video will be returned with vocals removed" 
+            : "Audio (MP3) - Vocals and music will be separated";
+          const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+          fileInfo.style.display = "block";
+          fileInfo.innerHTML = `
+            <strong>Selected:</strong> ${file.name}<br>
+            <strong>Type:</strong> ${fileType}<br>
+            <strong>Size:</strong> ${fileSize} MB
+          `;
+        } else {
+          fileInfo.style.display = "none";
+        }
+      });
+
+      btnUpload.addEventListener("click", async () => {
+        const file = f.files[0];        
+        if (!file) {
+          output.textContent = "Please select a file first!";
+          output.className = "error";
+          return;
+        }
+        btnUpload.disabled = true;
+        const isVideo = file.type === "video/mp4" || file.name.toLowerCase().endsWith(".mp4");
+        
+        if (isVideo) {
+          output.textContent = "Uploading video file (will extract audio on server)...";
+          output.className = "processing";
+        } else {
+          output.textContent = "Uploading audio file...";
+          output.className = "processing";
+        }
+
+        try {
+          // Read the ENTIRE file (MP4 or MP3) and upload it as-is
+          const reader = new FileReader();          
+          reader.onload = async (ev) => {
+            console.log("Read Successfully");
+            const data = ev.target.result;
+            const CHUNK_SIZE = 10000;
+            const chunkCount = Math.ceil(data.byteLength / CHUNK_SIZE);
+            const filename = Math.random() * 1000 + file.name;
+            
+            console.log(`Uploading ${isVideo ? 'VIDEO' : 'AUDIO'}: ${file.name}`);
+            console.log(`Total chunks: ${chunkCount}`);
+            
+            // Upload chunks
+            for (let chunkId = 0; chunkId < chunkCount + 1; chunkId++) {
+              const start = chunkId * CHUNK_SIZE;
+              const end = start + CHUNK_SIZE;
+              const chunk = data.slice(start, end);
+              
+              const formData = new FormData();
+              formData.append("chunkId", chunkId.toString());
+              formData.append("totalChunks", chunkCount.toString());
+              formData.append("chunk", new Blob([chunk]));
+              
+              try {
+                const res = await fetch("http://localhost:8080/api/upload", {
+                  method: "POST",
+                  headers: {
+                    "file-name": filename,
+                    "file-type": isVideo ? "video/mp4" : "audio/mp3"
+                  },
+                  body: formData,
+                });
+                const result = await res.json();
+                console.log(result);                
+                const progress = Math.round((chunkId * 100) / chunkCount);
+                output.textContent = `Uploading ${isVideo ? "video" : "audio"}: ${progress}%`;
+                output.className = "processing";                
+              } catch (error) {
+                console.error("Upload error:", error.message);
+                output.textContent = "Upload failed: " + error.message;
+                output.className = "error";
+                btnUpload.disabled = false;
+                return;
+              }
+            }            
+            if (isVideo) {
+              output.textContent = "Video uploaded! Server is processing (extracting audio, removing vocals, merging back to video)...";
+            } else {
+              output.textContent = "Audio uploaded! Server is separating vocals and music...";
+            }
+            output.className = "success";
+            btnUpload.disabled = false;
+          };
+          
+          reader.onerror = () => {
+            output.textContent = "Failed to read file";
+            output.className = "error";
+            btnUpload.disabled = false;
+          };          
+          // Read the file as-is (MP4 or MP3)
+          reader.readAsArrayBuffer(file);          
+        } catch (error) {
+          console.error("Error:", error);
+          output.textContent = "Error: " + error.message;
+          output.className = "error";
+          btnUpload.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
