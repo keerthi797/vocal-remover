@@ -8,7 +8,6 @@ Key Features
 🎬 Video Processing: Upload MP4 files and get back the same video with only vocals (music removed)
 🚀 Chunked Upload: Efficiently handles large files through chunked uploading
 🤖 AI-Powered: Uses Spleeter's machine learning models for high-quality audio separation
-💾 Automatic Cleanup: Temporary files are automatically deleted after 10 minutes
 📊 Real-time Progress: Visual feedback during upload and processing
 
 🛠️ Technology Stack
