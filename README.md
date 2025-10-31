@@ -1,5 +1,5 @@
 🎤 Vocal Separator
-A powerful web-based application that separates vocals from music in audio and video files using Spleeter AI technology.
+A web-based application that separates vocals from music in audio and video files using Spleeter AI technology.
 📝 Description
 Vocal Separator is a full-stack application that allows users to upload MP3 audio files or MP4 video files and automatically separate the vocals from the background music. For video files, the application intelligently extracts the audio, processes it to isolate vocals, and merges the vocals-only audio back with the original video - giving you a video with just the voice and no background music.
 Key Features
